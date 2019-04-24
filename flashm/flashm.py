@@ -44,7 +44,13 @@ class Config:
         :param alpha:
         """
 
-
+        self.dim = dim
+        self.cells = cells
+        self.CFL = CFL
+        self.dx = dx
+        self.sigma = sigma
+        self.v = v
+        self.alpha = alpha
 
 
 

@@ -1,15 +1,27 @@
 FLASHM
 ------
 
-Main classes
+
+Installation
 ============
+
+.. code:: bash
+
+    $ git clone https://github.com/lsawade/FLASHM
+    $ cd FLASHM
+    $ pip install .
+
+
+Main classes and running
+===========================
 
 The program is being run by two main classes, the configuration class `Config`,
 which sets all parameters of the domain, and the driver class `FLASHM`, which
 controls factors such as the time extrapolation as well as the Reconstruction
 of the flux between cells.
 
-.. highlight::
+.. code:: python
+
     # Set Config
     N = N_cells + 1     # N+1 is the number of cell edges.
     CFL = 0.1           # CFL number
@@ -27,5 +39,10 @@ of the flux between cells.
     time_stepping = "simple"
     reconstruction_method = "linear"
 
-    flashm = FLASHM(config, reconstruction_method="linear",
-                    time_ep_method="linear")
+    flashm = FLASHM(config, reconstruction_method=reconstruction_method,
+                    time_ep_method=time_stepping, time_length)
+
+    # Run the solver
+    flashm.run()
+
+
