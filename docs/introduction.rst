@@ -23,6 +23,7 @@ of the flux between cells.
 .. code:: python
 
     # Set Config
+    N_cells = 200
     N = N_cells + 1     # N+1 is the number of cell edges.
     CFL = 0.1           # CFL number
     dx = 1.0 / N_cells  # grid spacing
@@ -33,7 +34,7 @@ of the flux between cells.
 
     # Setting Configuration.
     config = Config(dim=1, cells=200, CFL=0.1, dx=1.0, sigma=0.05, v=1.0,
-                    alpha=4.0)
+                    alpha=4.0,profile="gauss_tophat")
 
     # Create solver class
     time_stepping = "simple"
