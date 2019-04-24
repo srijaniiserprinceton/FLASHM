@@ -1,2 +1,2 @@
 # FLASHM
-Finite Volume Laser Shockwave Modelling
+Finite volume Laser SHockwave Modelling
