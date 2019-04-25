@@ -26,18 +26,22 @@ def main():
     flashm = FLASHM(config, bc=bc, method=reconstruction_method,
                  time_ep_method=time_stepping, T=T)
 
-    # Run the solver
-    phi_new = flashm.run()
+    t = 0
+    while t<T:
+        # Run the solver
+        phi_new = flashm.one_time_step()
 
-    # plot
-    plt.ion()
-    plt.figure()
-    plt.plot(config.x[1:], flashm.init_avg(), label="Initial profile")
-    plt.plot(config.x[1:], phi_new, label="Profile after time T")
-    # plt.plot(config.x[1:], phi_new-flashm.init_avg(), label="Profile after time T")
-    plt.legend()
-    plt.show(block=True)
+        # plot
+        plt.ion()
+        plt.figure()
+        plt.plot(config.x[1:], flashm.init_avg(), label="Initial profile")
+        plt.plot(config.x[1:], phi_new, label="Profile after time T")
+        # plt.plot(config.x[1:], phi_new-flashm.init_avg(), label="Profile after time T")
+        plt.legend()
+        plt.pause(0.1)
+        plt.clf()
 
+        t += config.dt
 
 if __name__ == "__main__":
     main()

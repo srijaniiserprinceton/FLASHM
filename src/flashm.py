@@ -170,6 +170,41 @@ class FLASHM:
     def one_time_step(self):
         """Advances the simulation one timestep."""
 
+        # Parameters
+        N_cells = self.config.cells
+        dt = self.config.dt
+        N_ghost = self.config.N_ghost
+        # Setting new Phi
+        if self.t_step == 0:
+            self.phi_new = self.phi
+
+        phi_np1 = np.zeros(N_cells)
+        phi1 = np.zeros(N_cells)
+        phi2 = np.zeros(N_cells)
+
+        phi1 = self.phi_new + dt * eval(self.method + "(self.config.x,"
+                                                      "self.apply_bc("
+                                                      "self.phi_new),"
+                                                      "self.config.v,"
+                                                      "N_ghost)")
+
+        phi2 = 0.75 * self.phi_new + 0.25 * (
+                phi1 + dt * eval(self.method + "(self.config.x,"
+                                 + "self.apply_bc(phi1),"
+                                 + "self.config.v, N_ghost)"))
+
+        phi_np1 = (1.0 / 3.0) * self.phi_new + (2.0 / 3.0) * (
+                phi2 + dt * eval(self.method + "(self.config.x,"
+                                 + "self.apply_bc(phi2),"
+                                 + "self.config.v,"
+                                 + "N_ghost)"))
+        self.phi_new = phi_np1  ##reassigning phi with the phi at next time
+        # step
+
+        self.t_step += dt
+
+        return self.phi_new
+
     def run(self):
         """ Runs the program a set amount of time
         """
