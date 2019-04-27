@@ -22,8 +22,11 @@ def main():
     bc = "outgoing"
 
     time_stepping = "SSPRK3"
+
     # reconstruction_method = "first_order_upwind"
     # reconstruction_method = "second_order_centered"
+    # reconstruction_method = "third_order_upwind"
+    # reconstruction_method = "MC"
     reconstruction_method = "MP5"
 
     flashm = FLASHM(config, bc=bc, method=reconstruction_method,

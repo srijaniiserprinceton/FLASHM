@@ -18,11 +18,7 @@ This script contains main driver class for the shockwave modelling.
 import numpy as np
 import matplotlib
 import scipy.integrate as integrate
-from recon import second_order_centered, \
-    first_order_upwind, \
-    third_order_upwind,\
-    MC, \
-    MP5 #NOQA
+import recon
 
 class Config:
     """Class that handles parametrization of the domain.
@@ -112,7 +108,7 @@ class FLASHM:
         """
         self.config = config
         self.bc = bc
-        self.method = method
+        self.method = getattr(recon, method)
         self.time_ep_method = time_ep_method
         self.T = T
         self.t_step = 0
@@ -191,8 +187,34 @@ class FLASHM:
 
         return ghost_phi
 
+    def lr_flux(self, phi):
+        """ Handles computation of the left and right flux
+        :return:
+        """
+        # Shift mat
+        s = []
+        s.append(np.array([-3, -2, -1, 0, 1, 2]))
+        s.append(-1*s[0]+1)
+
+        # For constant velocity, the flux and the paramters vary by just a
+        # constant velocity. So, computing flux_discr just once. For a
+        # generic velocity, we need to compute twice
+
+        # contains u^L_jph and u^L_jmh
+        recon_L = flux_discr(scheme, phi_master[0, :, :])
+        # contains u^R_jph and u^R_jmh
+        recon_R = flux_discr(scheme, phi_master[1, :, :])
+
+
+
+
     def one_time_step(self):
         """Advances the simulation one timestep."""
+
+
+        # Shift vector
+        s = np.array([-3, -2, -1, 0, 1, 2])
+
 
         # Parameters
         N_cells = self.config.cells
@@ -206,25 +228,20 @@ class FLASHM:
         phi1 = np.zeros(N_cells)
         phi2 = np.zeros(N_cells)
 
-        phi1 = self.phi_new + dt * eval(self.method + "(self.config.x,"
-                                                      "self.apply_bc("
-                                                      "self.phi_new),"
-                                                      "self.config.v,"
-                                                      "N_ghost, "
-                                                      "self.config.alpha)")
+        phi1 = self.phi_new + dt * self.method(self.config.x,
+                                               self.apply_bc(self.phi_new),
+                                               self.config.v, N_ghost, s,
+                                               self.config.alpha)
 
         phi2 = 0.75 * self.phi_new + 0.25 * (
-                phi1 + dt * eval(self.method + "(self.config.x,"
-                                 + "self.apply_bc(phi1),"
-                                 + "self.config.v, N_ghost, "
-                                 + "self.config.alpha)"))
+                phi1 + dt * self.method(self.config.x, self.apply_bc(phi1),
+                                        self.config.v, N_ghost, s,
+                                        self.config.alpha))
 
         phi_np1 = (1.0 / 3.0) * self.phi_new + (2.0 / 3.0) * (
-                phi2 + dt * eval(self.method + "(self.config.x,"
-                                 + "self.apply_bc(phi2),"
-                                 + "self.config.v,"
-                                 + "N_ghost, "
-                                   "self.config.alpha)"))
+                phi2 + dt * self.method(self.config.x, self.apply_bc(phi2),
+                                        self.config.v, N_ghost, s,
+                                        self.config.alpha))
 
         self.phi_new = phi_np1  ##reassigning phi with the phi at next time
         # step
