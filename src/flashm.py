@@ -220,10 +220,12 @@ class FLASHM:
 
         # Shift mat
         s = np.zeros([4, 6], dtype=int)
-        s[0] = np.array([-3, -2, -1, 0, 1, 2])
-        s[1] = np.array([-3, -2, -1, 0, 1, 2])
-        s[2] = (1 - s[0])
-        s[3] = (1 - s[0] - 2)
+        # right going wind
+        s[1] = np.array([-3, -2, -1, 0, 1, 2]) # j plus half
+        s[0] = np.array([-3, -2, -1, 0, 1, 2]) # j minus half
+        # left going wind
+        s[3] = (1 - s[0]) # j plus half
+        s[2] = (1 - s[0] - 2) # j minus half
 
         # For constant velocity, the flux and the parameters vary by just a
         # constant velocity. So, computing flux_discrete just once. For a
