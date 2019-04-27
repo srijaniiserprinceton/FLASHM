@@ -24,7 +24,7 @@ def main():
     time_stepping = "SSPRK3"
     # reconstruction_method = "first_order_upwind"
     # reconstruction_method = "second_order_centered"
-    reconstruction_method = "MC"
+    reconstruction_method = "MP5"
 
     flashm = FLASHM(config, bc=bc, method=reconstruction_method,
                  time_ep_method=time_stepping, T=T)
@@ -35,6 +35,7 @@ def main():
     plt.ylim([-.5, 1.5])
     plt.xlim([0, 1])
     t = 0
+
     while t<T:
         # Run the solver
         plt.ylim([-.5, 1.5])

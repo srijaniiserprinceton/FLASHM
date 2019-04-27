@@ -21,7 +21,8 @@ import scipy.integrate as integrate
 from recon import second_order_centered, \
     first_order_upwind, \
     third_order_upwind,\
-    MC #NOQA
+    MC, \
+    MP5 #NOQA
 
 class Config:
     """Class that handles parametrization of the domain.
