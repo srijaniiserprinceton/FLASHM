@@ -14,6 +14,9 @@ This script contains the reconstruction algorithms.
 
 import numpy as np
 
+def minmod(x,y):
+    return 0.5*(np.sign(x) + np.sign(y))*np.minimum(np.abs(x), np.abs(y))
+
 
 def second_order_centered(x, phi, v, N_ghost):
     """ Computes the flux using the 2nd order centered scheme.
@@ -29,9 +32,12 @@ def first_order_upwind(x, phi, v, N_ghost):
     return flux
 
 
-def third_order_upwind(self):
+def third_order_upwind(x, phi, v, N_ghost):
     flux = -v * (
-            phi / 2.0 + phi_jp1 / 3.0 - phi_jm1 + phi_jm2 / 6.0) / dx
+            phi[N_ghost:-N_ghost] / 2.0 + phi[N_ghost+1:-N_ghost+1] / 3.0
+            - phi[N_ghost-1:-N_ghost-1]
+            + phi[N_ghost-2:-N_ghost-2] / 6.0) / np.diff(x)
+    return flux
 
 
 # MC limiter scheme

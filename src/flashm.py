@@ -18,7 +18,9 @@ This script contains main driver class for the shockwave modelling.
 import numpy as np
 import matplotlib
 import scipy.integrate as integrate
-from recon import second_order_centered, first_order_upwind
+from recon import second_order_centered, \
+    first_order_upwind, \
+    third_order_upwind #NOQA
 
 class Config:
     """Class that handles parametrization of the domain.
@@ -114,6 +116,7 @@ class FLASHM:
         self.t_step = 0
         self.phi = self.init_avg()
 
+
     def init_avg(self):
         """This method computes the initial average of the cells."""
         # Get x
@@ -144,27 +147,46 @@ class FLASHM:
 
         return f_avg
 
-    def pad(self, phi):
+    def pad(self, phi, N_ghost):
         """Pads phi with 3 zeros at beginning and end. To make application of
-        boundary conditions easier."""
+        boundary conditions easier.
+        :param phi: potential profile
+        :param : potential profile"""
 
-        return np.pad(phi, (3, 3), "constant", constant_values=(0, 0))
+
+        return np.pad(phi, (N_ghost, N_ghost), "constant", constant_values=(0, 0))
 
     def apply_bc(self, phi):
         """
         Applies boundary conditions to a phi
         """
 
+        # Set number of ghost cells
+        N_ghost = 3
+
         # Initialize phi with ghost cells
-        ghost_phi = self.pad(phi)
+        ghost_phi = self.pad(phi, N_ghost)
 
         # Apply BC's
         if self.bc == "periodic":
-            ghost_phi[-3:] = phi[:3]
-            ghost_phi[:3] = phi[-3:]
+            ghost_phi[-N_ghost:] = phi[:N_ghost]
+            ghost_phi[:N_ghost] = phi[-N_ghost:]
         elif self.bc == "fixed":
-            ghost_phi[-3:] = 0
-            ghost_phi[:3] = 0
+            ghost_phi[-N_ghost:] = 0
+            ghost_phi[:N_ghost] = 0
+        elif self.bc == "outgoing":
+            """ 
+            Use simple Newton extrapolation from the boundary:
+            f(x) = f1 + (f2-f1)/(x2-x1)(x-x1)
+            """
+
+            # performing a linear extrapolation at the boundaries
+            ghost_phi[0:N_ghost] = (phi[N_ghost + 1] - phi[
+                N_ghost]) * (np.arange(N_ghost) - N_ghost) + phi[N_ghost]
+
+            ghost_phi[-N_ghost:] = (phi[-1] - phi[-2]) * (
+                        1 + np.arange(N_ghost)) + phi[-2]
+
         return ghost_phi
 
     def one_time_step(self):

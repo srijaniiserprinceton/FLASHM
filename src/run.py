@@ -10,7 +10,7 @@ def main():
     dx = 1.0 / N_cells  # grid spacing
     sig = 0.05          # sigma for the gaussian in the initial function
     v = 1.0             # advection velocity
-    T = 1/v           # Length of domain in code units is 1.0
+    T = 0.5/v           # Length of domain in code units is 1.0
     alpha = 4.0         # parameter for defining the MC limited
 
     # Setting Configuration.
@@ -19,10 +19,12 @@ def main():
 
 
     # Initalize the solver
-    bc = "periodic"
+    bc = "outgoing"
+
     time_stepping = "SSPRK3"
-    reconstruction_method = "first_order_upwind"
-    reconstruction_method = "second_order_centered"
+    # reconstruction_method = "first_order_upwind"
+    # reconstruction_method = "second_order_centered"
+    reconstruction_method = "third_order_upwind"
 
     flashm = FLASHM(config, bc=bc, method=reconstruction_method,
                  time_ep_method=time_stepping, T=T)
@@ -30,16 +32,20 @@ def main():
     # plot
     plt.ion()
     plt.figure()
+    plt.ylim([-.5, 1.5])
+    plt.xlim([0, 1])
     t = 0
     while t<T:
         # Run the solver
+        plt.ylim([-.5, 1.5])
+        plt.xlim([0, 1])
         phi_new = flashm.one_time_step()
 
-        plt.title(str(t))
+        plt.title("%2.3f s" % t)
         plt.plot(config.x[1:], flashm.init_avg(), label="Initial profile")
         plt.plot(config.x[1:], phi_new, label="Profile after time T")
         # plt.plot(config.x[1:], phi_new-flashm.init_avg(), label="Profile after time T")
-        plt.legend()
+        plt.legend(loc=2)
         plt.pause(0.001)
         plt.clf()
 
