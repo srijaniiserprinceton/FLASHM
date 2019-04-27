@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 def main():
     N_cells = 200       # number of cells
     N = N_cells + 1     # N+1 is the number of cell edges.
-    CFL = 0.5           # CFL number
+    CFL = 0.25           # CFL number
     dx = 1.0 / N_cells  # grid spacing
     sig = 0.05          # sigma for the gaussian in the initial function
-    v = 1.0             # advection velocity
-    T = 0.5/v           # Length of domain in code units is 1.0
+    v = -1.0             # advection velocity
+    T = 0.5/np.abs(v)           # Length of domain in code units is 1.0
     alpha = 4.0         # parameter for defining the MC limited
 
     # Setting Configuration.
@@ -24,10 +24,10 @@ def main():
     time_stepping = "SSPRK3"
 
     # reconstruction_method = "first_order_upwind"
-    # reconstruction_method = "second_order_centered"
+    reconstruction_method = "second_order_centered"
     # reconstruction_method = "third_order_upwind"
     # reconstruction_method = "MC"
-    reconstruction_method = "MP5"
+    # reconstruction_method = "MP5"
 
     flashm = FLASHM(config, bc=bc, method=reconstruction_method,
                  time_ep_method=time_stepping, T=T)
@@ -54,6 +54,19 @@ def main():
         plt.clf()
 
         t += config.dt
+
+    # Run the solver
+    plt.ylim([-.5, 1.5])
+    plt.xlim([0, 1])
+
+
+    plt.title("%2.3f s" % t)
+    plt.plot(config.x[1:], flashm.init_avg(), label="Initial profile")
+    plt.plot(config.x[1:], phi_new, label="Profile after time T")
+    # plt.plot(config.x[1:], phi_new-flashm.init_avg(), label="Profile after time T")
+    plt.legend(loc=2)
+    plt.show(block=True)
+
 
 if __name__ == "__main__":
     main()

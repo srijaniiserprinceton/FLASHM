@@ -36,26 +36,48 @@ def second_order_centered(x, phi, v, N_ghost, s, alpha):
     boundary conditions.
     :param s: shift vector
     """
+    phi_out = np.zeros([2, len(x)-1])
 
-    flux = -v * (phi[N_ghost + s[4]:-N_ghost + s[4]]
-                 - phi[N_ghost + s[2]:-N_ghost + s[2]]) / (2 * np.diff(x))
-    return flux
+    phi_out[0, :] = (phi[N_ghost + s[1, 2]:-N_ghost + s[1, 2]]
+                     + phi[N_ghost + s[1, 3]:-N_ghost + s[1, 3]]) / 2.0
 
+    phi_out[1, :] = (phi[N_ghost + s[0, 3]:-N_ghost + s[0, 3]]
+                     + phi[N_ghost + s[0, 4]:-N_ghost + s[0, 4]]) / 2.0
+
+    return phi_out
 
 def first_order_upwind(x, phi, v, N_ghost, s, alpha):
 
-    flux = -v * (phi[N_ghost + s[3]:-N_ghost + s[3]]
-                 - phi[N_ghost + s[2]:-N_ghost + s[2]]) / np.diff(x)
-    return flux
+    phi_out = np.zeros([2, len(x) - 1])
+
+    phi_out[0, :] = phi[N_ghost + s[1, 2]:-N_ghost + s[1, 2]]
+    phi_out[1, :] = phi[N_ghost + s[0, 3]:-N_ghost + s[0, 3]]
+
+    return phi_out
 
 
 def third_order_upwind(x, phi, v, N_ghost, s, alpha):
 
-    flux = -v * (phi[N_ghost + s[3]:-N_ghost + s[3]] / 2.0
-                 + phi[N_ghost + s[4]:-N_ghost + s[4]] / 3.0
-                 - phi[N_ghost + s[2]:-N_ghost + s[2]]
-                 + phi[N_ghost + s[1]:-N_ghost + s[1]] / 6.0) / np.diff(x)
-    return flux
+    N_cell = len(x) - 1
+    phi_out = np.zeros([2, N_cell])
+
+    phi_out[0, :] = phi[N_ghost + s[1, 2]:-N_ghost + s[1, 2]] \
+                        + 0.25 * (phi[N_ghost + s[1, 5]:-N_ghost + s[1, 5]]
+                                  - phi[N_ghost + s[1, 3]:-N_ghost + s[1, 3]]) \
+                        + (1.0 / 12.0) \
+                            * (phi[N_ghost + s[1, 5]:-N_ghost + s[1, 5]]
+                               + phi[N_ghost + s[1, 3]:-N_ghost + s[1, 3]]
+                               - 2 * phi[N_ghost + s[1, 4]:-N_ghost +s[1, 4]])
+
+    phi_out[1, :] = phi[N_ghost + s[0, 3]:-N_ghost + s[0, 3]] \
+                        + 0.25 * (phi[N_ghost + s[0, 4]:-N_ghost + s[0, 4]]
+                                  - phi[N_ghost + s[0, 2]:-N_ghost + s[0, 2]]) \
+                        + (1.0 / 12.0) \
+                    * (phi[N_ghost + s[0, 4]:-N_ghost + s[0, 4]]
+                       + phi[N_ghost + s[0, 2]:-N_ghost + s[0, 2]]
+                       - 2 * phi[N_ghost + s[0, 3]:-N_ghost + s[0, 3]])
+
+    return phi_out
 
 
 def MC(x, phi, v, N_ghost, s, alpha):
@@ -164,12 +186,11 @@ def MP5(x, phi, v, N_ghost, s, alpha):
                               - phi[N_ghost + s[1] + j:-N_ghost + s[1] + j]) \
                  + (4.0 / 3.0) * d_M4_jmh
 
-        phi_min = np.maximum(np.minimum(phi[N_ghost + s[2] + j:-N_ghost + s[2] + j], 
-                                        phi[N_ghost + s[3] + j:-N_ghost + s[3] + j], 
-                                        phi_MD),
-                             np.minimum(phi[N_ghost + s[2] + j:-N_ghost + s[2] + j], 
-                                        phi_UL,
-                                        phi_LC))
+        phi_min = np.maximum(
+            np.minimum(phi[N_ghost + s[2] + j:-N_ghost + s[2] + j],
+                       phi[N_ghost + s[3] + j:-N_ghost + s[3] + j], phi_MD),
+            np.minimum(phi[N_ghost + s[2] + j:-N_ghost + s[2] + j],phi_UL,
+                       phi_LC))
         
         phi_max = np.minimum(np.maximum(phi[N_ghost + s[2] + j:-N_ghost + s[2] + j], 
                                         phi[N_ghost + s[3] + j:-N_ghost + s[3] + j], phi_MD),
