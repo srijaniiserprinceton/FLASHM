@@ -56,7 +56,7 @@ class Config:
         self.sigma = sigma
         self.v = v
         self.alpha = alpha
-        self.N_ghost = 3
+        self.N_ghost = 5
         # Compute cell edges
         self.x = np.arange(0, 1 + dx, dx)
 
@@ -170,13 +170,14 @@ class FLASHM:
 
         return f_avg
 
-    def pad(self, phi, N_ghost):
-        """Pads phi with 3 zeros at beginning and end. To make application of
+    def pad(self, phi):
+        """Pads phi with N zeros at beginning and end. To make application of
         boundary conditions easier.
-        :param phi: potential profile
-        :param : potential profile"""
+        N_ghost is the number of ghost cells on each side.
+        :param phi: potential profile"""
 
-        return np.pad(phi, (N_ghost, N_ghost), "constant", constant_values=(0, 0))
+        return np.pad(phi, (self.config.N_ghost, self.config.N_ghost),
+                      "constant", constant_values=(0, 0))
 
     def apply_bc(self, phi):
         """
@@ -184,10 +185,10 @@ class FLASHM:
         """
 
         # Set number of ghost cells
-        N_ghost = 3
+        N_ghost = self.config.N_ghost
 
         # Initialize phi with ghost cells
-        ghost_phi = self.pad(phi, N_ghost)
+        ghost_phi = self.pad(phi)
 
         # Apply BC's
         if self.bc == "periodic":

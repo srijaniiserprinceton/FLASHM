@@ -10,7 +10,7 @@ def main():
     dx = 1.0 / N_cells  # grid spacing
     sig = 0.05          # sigma for the gaussian in the initial function
     v = -1.0             # advection velocity
-    T = 0.5/np.abs(v)           # Length of domain in code units is 1.0
+    T = 1/np.abs(v)           # Length of domain in code units is 1.0
     alpha = 4.0         # parameter for defining the MC limited
 
     # Setting Configuration.
@@ -24,9 +24,9 @@ def main():
     time_stepping = "SSPRK3"
 
     # reconstruction_method = "first_order_upwind"
-    reconstruction_method = "second_order_centered"
+    # reconstruction_method = "second_order_centered"
     # reconstruction_method = "third_order_upwind"
-    # reconstruction_method = "MC"
+    reconstruction_method = "MC"
     # reconstruction_method = "MP5"
 
     flashm = FLASHM(config, bc=bc, method=reconstruction_method,

@@ -23,7 +23,6 @@ def minmod(x_arr):
     x_array = np.array(x_arr)
     x_twoelement_sum = 0.5 * (np.sign(x_array[0, :]) + np.sign(x_array[1:, :]))
     x_twoelement_sum[1:, :] = np.abs(x_twoelement_sum[1:, :])
-
     sign_minmod = np.prod(x_twoelement_sum, axis=0)
     minmod_val = sign_minmod * np.amin(np.abs(x_array), axis=0)
 
@@ -62,12 +61,12 @@ def third_order_upwind(x, phi, v, N_ghost, s, alpha):
     phi_out = np.zeros([2, N_cell])
 
     phi_out[0, :] = phi[N_ghost + s[1, 2]:-N_ghost + s[1, 2]] \
-                        + 0.25 * (phi[N_ghost + s[1, 5]:-N_ghost + s[1, 5]]
-                                  - phi[N_ghost + s[1, 3]:-N_ghost + s[1, 3]]) \
+                        + 0.25 * (phi[N_ghost + s[1, 3]:-N_ghost + s[1, 3]]
+                                  - phi[N_ghost + s[1, 1]:-N_ghost + s[1, 1]]) \
                         + (1.0 / 12.0) \
-                            * (phi[N_ghost + s[1, 5]:-N_ghost + s[1, 5]]
-                               + phi[N_ghost + s[1, 3]:-N_ghost + s[1, 3]]
-                               - 2 * phi[N_ghost + s[1, 4]:-N_ghost +s[1, 4]])
+                            * (phi[N_ghost + s[1, 3]:-N_ghost + s[1, 3]]
+                               + phi[N_ghost + s[1, 1]:-N_ghost + s[1, 1]]
+                               - 2 * phi[N_ghost + s[1, 2]:-N_ghost +s[1, 2]])
 
     phi_out[1, :] = phi[N_ghost + s[0, 3]:-N_ghost + s[0, 3]] \
                         + 0.25 * (phi[N_ghost + s[0, 4]:-N_ghost + s[0, 4]]
@@ -82,40 +81,43 @@ def third_order_upwind(x, phi, v, N_ghost, s, alpha):
 
 def MC(x, phi, v, N_ghost, s, alpha):
     """MC limiter scheme"""
+
+    N_cell = len(x) - 1
+    phi_out = np.zeros([2, N_cell])
     
-    phi_jp1_MP = phi[N_ghost + s[3]:-N_ghost + s[3]] \
-                 + minmod_two(phi[N_ghost + s[4]:-N_ghost + s[4]]
-                              - phi[N_ghost + s[3]:-N_ghost + s[3]],
-                          alpha * (phi[N_ghost + s[3]:-N_ghost + s[3]]
-                                   - phi[N_ghost + s[2]:-N_ghost + s[2]]))
+    phi_jp1_MP = phi[N_ghost + s[0, 3]:-N_ghost + s[0, 3]] \
+                 + minmod_two(phi[N_ghost + s[0, 4]:-N_ghost + s[0, 4]]
+                              - phi[N_ghost + s[0, 3]:-N_ghost + s[0, 3]],
+                          alpha * (phi[N_ghost + s[0, 3]:-N_ghost + s[0, 3]]
+                                   - phi[N_ghost + s[0, 2]:-N_ghost + s[0, 2]]))
 
-    phi_jm1_MP = phi[N_ghost + s[2]:-N_ghost + s[2]] \
-                 + minmod_two(phi[N_ghost + s[3]:-N_ghost + s[3]]
-                              - phi[N_ghost + s[2]:-N_ghost + s[2]],
-                          alpha * (phi[N_ghost + s[2]:-N_ghost + s[2]]
-                                   - phi[N_ghost + s[5]:-N_ghost + s[5]]))
+    phi_jp1_3u = (5.0 / 6.0) * phi[N_ghost + s[0, 3]:-N_ghost + s[0, 3]] \
+                 + (1.0 / 3.0) * phi[N_ghost + s[0, 4]:-N_ghost + s[0, 4]] \
+                 - (1.0 / 6.0) * phi[N_ghost + s[0, 2]:-N_ghost + s[0, 2]]
 
-    phi_jp1_3u = (5.0 / 6.0) * phi[N_ghost + s[3]:-N_ghost + s[3]] \
-                 + (1.0 / 3.0) * phi[N_ghost + s[4]:-N_ghost + s[4]] \
-                 - (1.0 / 6.0) * phi[N_ghost + s[2]:-N_ghost + s[2]]
-
-    phi_jm1_3u = (5.0 / 6.0) * phi[N_ghost + s[2]:-N_ghost + s[2]] \
-                 + (1.0 / 3.0) * phi[N_ghost + s[3]:-N_ghost + s[3]] \
-                 - (1.0 / 6.0) * phi[N_ghost + s[1]:-N_ghost + s[1]]
-
-    phi_jphalf_MC = phi[N_ghost + s[3]:-N_ghost + s[3]] \
+    phi_out[1, :] = phi[N_ghost + s[0, 3]:-N_ghost + s[0, 3]] \
                     + minmod_two(phi_jp1_3u
-                                 - phi[N_ghost + s[3]:-N_ghost + s[3]],
-                             phi_jp1_MP - phi[N_ghost + s[3]:-N_ghost + s[3]])
+                                 - phi[N_ghost + s[0, 3]:-N_ghost + s[0, 3]],
+                                 phi_jp1_MP - phi[N_ghost + s[0, 3]:-N_ghost +
+                                                                    s[0, 3]])
 
-    phi_jmhalf_MC = phi[N_ghost + s[2]:-N_ghost + s[2]] \
+    phi_jm1_MP = phi[N_ghost + s[1, 2]:-N_ghost + s[1, 2]] \
+                 + minmod_two(phi[N_ghost + s[1, 3]:-N_ghost + s[1, 3]]
+                              - phi[N_ghost + s[1, 2]:-N_ghost + s[1, 2]],
+                          alpha * (phi[N_ghost + s[1, 2]:-N_ghost + s[1, 2]]
+                                   - phi[N_ghost + s[1, 1]:-N_ghost + s[1, 1]]))
+
+    phi_jm1_3u = (5.0 / 6.0) * phi[N_ghost + s[1, 2]:-N_ghost + s[1, 2]] \
+                 + (1.0 / 3.0) * phi[N_ghost + s[1, 3]:-N_ghost + s[1, 3]] \
+                 - (1.0 / 6.0) * phi[N_ghost + s[1, 1]:-N_ghost + s[1, 1]]
+
+    phi_out[0, :] = phi[N_ghost + s[1, 2]:-N_ghost + s[1, 2]] \
                     + minmod_two(phi_jm1_3u
-                                 - phi[N_ghost + s[2]:-N_ghost + s[2]],
-                             phi_jm1_MP - phi[N_ghost + s[2]:-N_ghost + s[2]])
+                                 - phi[N_ghost + s[1, 2]:-N_ghost + s[1, 2]],
+                             phi_jm1_MP - phi[N_ghost + s[1, 2]:-N_ghost +
+                                                                s[1, 2]])
 
-    flux = -v * (phi_jphalf_MC - phi_jmhalf_MC) / np.diff(x)
-
-    return flux
+    return phi_out
 
 
 def MP5(x, phi, v, N_ghost, s, alpha):
