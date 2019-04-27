@@ -20,7 +20,8 @@ import matplotlib
 import scipy.integrate as integrate
 from recon import second_order_centered, \
     first_order_upwind, \
-    third_order_upwind #NOQA
+    third_order_upwind,\
+    MC #NOQA
 
 class Config:
     """Class that handles parametrization of the domain.
@@ -208,18 +209,22 @@ class FLASHM:
                                                       "self.apply_bc("
                                                       "self.phi_new),"
                                                       "self.config.v,"
-                                                      "N_ghost)")
+                                                      "N_ghost, "
+                                                      "self.config.alpha)")
 
         phi2 = 0.75 * self.phi_new + 0.25 * (
                 phi1 + dt * eval(self.method + "(self.config.x,"
                                  + "self.apply_bc(phi1),"
-                                 + "self.config.v, N_ghost)"))
+                                 + "self.config.v, N_ghost, "
+                                 + "self.config.alpha)"))
 
         phi_np1 = (1.0 / 3.0) * self.phi_new + (2.0 / 3.0) * (
                 phi2 + dt * eval(self.method + "(self.config.x,"
                                  + "self.apply_bc(phi2),"
                                  + "self.config.v,"
-                                 + "N_ghost)"))
+                                 + "N_ghost, "
+                                   "self.config.alpha)"))
+
         self.phi_new = phi_np1  ##reassigning phi with the phi at next time
         # step
 
@@ -239,32 +244,11 @@ class FLASHM:
         if self.t_step == 0:
             self.phi_new = self.phi
 
-
         while self.t_step < self.T:
-            phi_np1 = np.zeros(N_cells)
-            phi1 = np.zeros(N_cells)
-            phi2 = np.zeros(N_cells)
+            # Using the one time step function to advance one step in time.
+            self.phi_new = self.one_time_step()
 
-
-            phi1 = self.phi_new + dt * eval(self.method + "(self.config.x,"
-                                                          "self.apply_bc("
-                                                          "self.phi_new),"
-                                                          "self.config.v,"
-                                                          "N_ghost)")
-
-            phi2 = 0.75 * self.phi_new + 0.25 * (
-                    phi1 + dt * eval(self.method + "(self.config.x,"
-                                     + "self.apply_bc(phi1),"
-                                     + "self.config.v, N_ghost)"))
-
-            phi_np1 = (1.0 / 3.0) * self.phi_new + (2.0 / 3.0) * (
-                        phi2 + dt * eval(self.method + "(self.config.x,"
-                                                       + "self.apply_bc(phi2),"
-                                                       + "self.config.v,"
-                                                       + "N_ghost)"))
-            self.phi_new = phi_np1  ##reassigning phi with the phi at next time
-            # step
-
+            # advance time itself.
             self.t_step += dt
 
         return self.phi_new

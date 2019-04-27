@@ -14,73 +14,89 @@ This script contains the reconstruction algorithms.
 
 import numpy as np
 
-def minmod(x,y):
-    return 0.5*(np.sign(x) + np.sign(y))*np.minimum(np.abs(x), np.abs(y))
+
+def minmod(x, y):
+    return 0.5 * (np.sign(x) + np.sign(y)) * np.minimum(np.abs(x), np.abs(y))
 
 
-def second_order_centered(x, phi, v, N_ghost):
+def second_order_centered(x, phi, v, N_ghost, alpha):
     """ Computes the flux using the 2nd order centered scheme.
     The phi that is taken in is padded. The padding depends on the
     boundary conditions."""
 
-    flux = -v * (phi[N_ghost+1:-N_ghost+1] - phi[N_ghost-1:-N_ghost-1]) / (2 * np.diff(x))
+    flux = -v * (phi[N_ghost + 1:-N_ghost + 1] - phi[
+                                                 N_ghost - 1:-N_ghost - 1]) / (
+                       2 * np.diff(x))
     return flux
 
 
-def first_order_upwind(x, phi, v, N_ghost):
-    flux = -v * (phi[N_ghost:-N_ghost] - phi[N_ghost-1:-N_ghost-1]) / np.diff(x)
+def first_order_upwind(x, phi, v, N_ghost, alpha):
+    flux = -v * (phi[N_ghost:-N_ghost] - phi[
+                                         N_ghost - 1:-N_ghost - 1]) / np.diff(x)
     return flux
 
 
-def third_order_upwind(x, phi, v, N_ghost):
+def third_order_upwind(x, phi, v, N_ghost, alpha):
     flux = -v * (
-            phi[N_ghost:-N_ghost] / 2.0 + phi[N_ghost+1:-N_ghost+1] / 3.0
-            - phi[N_ghost-1:-N_ghost-1]
-            + phi[N_ghost-2:-N_ghost-2] / 6.0) / np.diff(x)
+            phi[N_ghost:-N_ghost] / 2.0 + phi[N_ghost + 1:-N_ghost + 1] / 3.0
+            - phi[N_ghost - 1:-N_ghost - 1]
+            + phi[N_ghost - 2:-N_ghost - 2] / 6.0) / np.diff(x)
     return flux
 
 
-# MC limiter scheme
-def MC(self):
-    phi_jp1_MP = phi + minmod_two(phi_jp1 - phi,
-                                  alpha * (phi - phi_jm1))
-    phi_jm1_MP = phi_jm1 + minmod_two(phi - phi_jm1,
-                                      alpha * (phi_jm1 - phi_jm2))
+def MC(x, phi, v, N_ghost, alpha):
+    """MC limiter scheme"""
+    phi_jp1_MP = phi[N_ghost:-N_ghost] \
+                 + minmod(phi[N_ghost + 1:-N_ghost + 1] - phi[N_ghost:-N_ghost],
+                          alpha * (phi[N_ghost:-N_ghost]
+                                   - phi[N_ghost - 1:-N_ghost - 1]))
 
-    phi_jp1_3u = (5.0 / 6.0) * phi + (1.0 / 3.0) * phi_jp1 - (
-            1.0 / 6.0) * phi_jm1
-    phi_jm1_3u = (5.0 / 6.0) * phi_jm1 + (1.0 / 3.0) * phi - (
-            1.0 / 6.0) * phi_jm2
+    phi_jm1_MP = phi[N_ghost - 1:-N_ghost - 1] \
+                 + minmod(phi[N_ghost:-N_ghost] - phi[N_ghost - 1:-N_ghost - 1],
+                          alpha * (phi[N_ghost - 1:-N_ghost - 1]
+                                   - phi[N_ghost + 2:-N_ghost + 2]))
 
-    phi_jphalf_MC = phi + minmod_two(phi_jp1_3u - phi, phi_jp1_MP - phi)
-    phi_jmhalf_MC = phi_jm1 + minmod_two(phi_jm1_3u - phi_jm1,
-                                         phi_jm1_MP - phi_jm1)
+    phi_jp1_3u = (5.0 / 6.0) * phi[N_ghost:-N_ghost] \
+                 + (1.0 / 3.0) * phi[N_ghost + 1:-N_ghost + 1] \
+                 - (1.0 / 6.0) * phi[N_ghost - 1:-N_ghost - 1]
 
-    flux = -v * (phi_jphalf_MC - phi_jmhalf_MC) / dx
+    phi_jm1_3u = (5.0 / 6.0) * phi[N_ghost - 1:-N_ghost - 1] \
+                 + (1.0 / 3.0) * phi[N_ghost:-N_ghost] \
+                 - (1.0 / 6.0) * phi[N_ghost - 2:-N_ghost - 2]
+
+    phi_jphalf_MC = phi[N_ghost:-N_ghost] \
+                    + minmod(phi_jp1_3u - phi[N_ghost:-N_ghost],
+                             phi_jp1_MP - phi[N_ghost:-N_ghost])
+    phi_jmhalf_MC = phi[N_ghost - 1:-N_ghost - 1] \
+                    + minmod(phi_jm1_3u - phi[N_ghost - 1:-N_ghost - 1],
+                             phi_jm1_MP - phi[N_ghost - 1:-N_ghost - 1])
+
+    flux = -v * (phi_jphalf_MC - phi_jmhalf_MC) / np.diff(x)
+
+    return flux
 
 
 # Suresh-Hyunh scheme
-def MP5(self):
+def MP5(x, phi_master, v, N_ghost, alpha):
     """
-    This method computes the MP5
-    :return: flux
+    This method computes the MP5 reconstruction, also called Suresh-Hyunh
+    scheme.
     """
-    phi_j_final = np.zeros([2, N_cells])
-    # print(np.shape(phi_j_final))
+    phi_j_final = np.zeros([2, len(x)-1])
 
     # j = 2 is the j-half case and j = 3 is the j+half case
     for j in [2, 3]:
         # This is the MP5 original reconstruction
-        phi_jph_orig = (2.0 * phi_master[j - 2] - 13.0 * phi_master[
-            j - 1] + 47.0 * phi_master[j] + 27 * phi_master[
-                            j + 1] - 3.0 * phi_master[
-                            j + 2]) / 60.0  # for right-going wind
+        phi_jph_orig = (2.0 * phi_master[j - 2]
+                        - 13.0 * phi_master[j - 1]
+                        + 47.0 * phi_master[j]
+                        + 27 * phi_master[j + 1]
+                        - 3.0 * phi_master[j + 2]) / 60.0  # for right-going wind
 
-        # phi_jph_orig = (7.0/12.0)*(phi_master[j] + phi_master[j+1]) - (1.0/12.0)*(phi_master[j-1] + phi_master[j+2]) #using Collela 4th ordered centered
-
-        phi_MP = phi_master[j] + minmod(np.array(
-            [phi_master[j + 1] - phi_master[j],
-             alpha * (phi_master[j] - phi_master[j - 1])]))
+        phi_MP = phi_master[j] \
+                 + minmod(np.array([phi_master[j + 1] - phi_master[j],
+                                    alpha * (phi_master[j]
+                                             - phi_master[j - 1])]))
 
         # creating the array to be compared with epsilon at each interface
         cond_array = np.multiply(phi_jph_orig - phi_master[j],
@@ -123,5 +139,6 @@ def MP5(self):
             [phi_min - phi_jph_orig, phi_max - phi_jph_orig])))[
             cond_array > eps_SH]
 
+    # the flux without Reimann solver. Not considering waves in both direction
     flux = -v * (phi_j_final[1, :] - phi_j_final[0,
-                                     :]) / dx  # the flux without Reimann solver. Not considering waves in both direction
+                                     :]) / dx
