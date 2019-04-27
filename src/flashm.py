@@ -18,7 +18,11 @@ This script contains main driver class for the shockwave modelling.
 import numpy as np
 import matplotlib
 import scipy.integrate as integrate
-from recon import second_order_centered, first_order_upwind
+from recon import second_order_centered, \
+    first_order_upwind, \
+    third_order_upwind,\
+    MC, \
+    MP5 #NOQA
 
 class Config:
     """Class that handles parametrization of the domain.
@@ -114,6 +118,7 @@ class FLASHM:
         self.t_step = 0
         self.phi = self.init_avg()
 
+
     def init_avg(self):
         """This method computes the initial average of the cells."""
         # Get x
@@ -144,27 +149,46 @@ class FLASHM:
 
         return f_avg
 
-    def pad(self, phi):
+    def pad(self, phi, N_ghost):
         """Pads phi with 3 zeros at beginning and end. To make application of
-        boundary conditions easier."""
+        boundary conditions easier.
+        :param phi: potential profile
+        :param : potential profile"""
 
-        return np.pad(phi, (3, 3), "constant", constant_values=(0, 0))
+
+        return np.pad(phi, (N_ghost, N_ghost), "constant", constant_values=(0, 0))
 
     def apply_bc(self, phi):
         """
         Applies boundary conditions to a phi
         """
 
+        # Set number of ghost cells
+        N_ghost = 3
+
         # Initialize phi with ghost cells
-        ghost_phi = self.pad(phi)
+        ghost_phi = self.pad(phi, N_ghost)
 
         # Apply BC's
         if self.bc == "periodic":
-            ghost_phi[-3:] = phi[:3]
-            ghost_phi[:3] = phi[-3:]
+            ghost_phi[-N_ghost:] = phi[:N_ghost]
+            ghost_phi[:N_ghost] = phi[-N_ghost:]
         elif self.bc == "fixed":
-            ghost_phi[-3:] = 0
-            ghost_phi[:3] = 0
+            ghost_phi[-N_ghost:] = 0
+            ghost_phi[:N_ghost] = 0
+        elif self.bc == "outgoing":
+            """ 
+            Use simple Newton extrapolation from the boundary:
+            f(x) = f1 + (f2-f1)/(x2-x1)(x-x1)
+            """
+
+            # performing a linear extrapolation at the boundaries
+            ghost_phi[0:N_ghost] = (phi[N_ghost + 1] - phi[
+                N_ghost]) * (np.arange(N_ghost) - N_ghost) + phi[N_ghost]
+
+            ghost_phi[-N_ghost:] = (phi[-1] - phi[-2]) * (
+                        1 + np.arange(N_ghost)) + phi[-2]
+
         return ghost_phi
 
     def one_time_step(self):
@@ -186,18 +210,22 @@ class FLASHM:
                                                       "self.apply_bc("
                                                       "self.phi_new),"
                                                       "self.config.v,"
-                                                      "N_ghost)")
+                                                      "N_ghost, "
+                                                      "self.config.alpha)")
 
         phi2 = 0.75 * self.phi_new + 0.25 * (
                 phi1 + dt * eval(self.method + "(self.config.x,"
                                  + "self.apply_bc(phi1),"
-                                 + "self.config.v, N_ghost)"))
+                                 + "self.config.v, N_ghost, "
+                                 + "self.config.alpha)"))
 
         phi_np1 = (1.0 / 3.0) * self.phi_new + (2.0 / 3.0) * (
                 phi2 + dt * eval(self.method + "(self.config.x,"
                                  + "self.apply_bc(phi2),"
                                  + "self.config.v,"
-                                 + "N_ghost)"))
+                                 + "N_ghost, "
+                                   "self.config.alpha)"))
+
         self.phi_new = phi_np1  ##reassigning phi with the phi at next time
         # step
 
@@ -217,32 +245,11 @@ class FLASHM:
         if self.t_step == 0:
             self.phi_new = self.phi
 
-
         while self.t_step < self.T:
-            phi_np1 = np.zeros(N_cells)
-            phi1 = np.zeros(N_cells)
-            phi2 = np.zeros(N_cells)
+            # Using the one time step function to advance one step in time.
+            self.phi_new = self.one_time_step()
 
-
-            phi1 = self.phi_new + dt * eval(self.method + "(self.config.x,"
-                                                          "self.apply_bc("
-                                                          "self.phi_new),"
-                                                          "self.config.v,"
-                                                          "N_ghost)")
-
-            phi2 = 0.75 * self.phi_new + 0.25 * (
-                    phi1 + dt * eval(self.method + "(self.config.x,"
-                                     + "self.apply_bc(phi1),"
-                                     + "self.config.v, N_ghost)"))
-
-            phi_np1 = (1.0 / 3.0) * self.phi_new + (2.0 / 3.0) * (
-                        phi2 + dt * eval(self.method + "(self.config.x,"
-                                                       + "self.apply_bc(phi2),"
-                                                       + "self.config.v,"
-                                                       + "N_ghost)"))
-            self.phi_new = phi_np1  ##reassigning phi with the phi at next time
-            # step
-
+            # advance time itself.
             self.t_step += dt
 
         return self.phi_new
