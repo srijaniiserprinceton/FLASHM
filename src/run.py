@@ -9,7 +9,7 @@ def main():
     CFL = 0.25           # CFL number
     dx = 1.0 / N_cells  # grid spacing
     sig = 0.05          # sigma for the gaussian in the initial function
-    v = -1.0             # advection velocity
+    v =  1.0             # advection velocity
     T = 1/np.abs(v)           # Length of domain in code units is 1.0
     alpha = 4.0         # parameter for defining the MC limited
 
@@ -38,7 +38,6 @@ def main():
     plt.ylim([-.5, 1.5])
     plt.xlim([0, 1])
     t = 0
-
 
     # Start countin'
     start = time.time()
@@ -69,7 +68,6 @@ def main():
             plt.clf()
 
         t += config.dt
-
 
     # Run the solver
     plt.ylim([-.5, 1.5])
