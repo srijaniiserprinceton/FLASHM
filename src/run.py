@@ -39,16 +39,6 @@ def main():
     plt.xlim([0, 1])
     t = 0
 
-    # Start countin'
-    start = time.time()
-
-    t1 = np.arange(0, 1+config.dt, config.dt)
-    energy = np.zeros(len(t1))
-    energy[0] = np.linalg.norm(flashm.phi)
-    rel_energy = energy[0]
-    energy[0] = energy[0]/energy[0]
-    counter = 0
-
     while t<T-config.dt:
         # Run the solver
         phi_new = flashm.one_time_step()
