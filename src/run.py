@@ -36,7 +36,8 @@ def main():
 
     # Initalize the solver
     bc = "outgoing"
-
+    evolve_v = "True"   # change profile of v in time  hard coded: make function
+                        # of v and t with lambda...
     time_stepping = "SSPRK3"
 
     # reconstruction_method = "first_order_upwind"
@@ -46,7 +47,7 @@ def main():
     reconstruction_method = "MP5"
 
     flashm = FLASHM(config, bc=bc, method=reconstruction_method,
-                 time_ep_method=time_stepping, T=T, evolve_v=fancy)
+                 time_ep_method=time_stepping, T=T, evolve_v=evolve_v)
 
     # plot
     plt.ion()
