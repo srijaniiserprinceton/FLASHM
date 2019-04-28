@@ -118,7 +118,7 @@ class FLASHM:
     """Handles running the main program."""
 
     def __init__(self, config, bc="periodic", method="first_order_upwind",
-                 time_ep_method="SSPRK3", T=1):
+                 time_ep_method="SSPRK3", T=1, evolve_v=False):
         """
         :param config:
         :param bc: type of boundary conditions
@@ -133,11 +133,10 @@ class FLASHM:
         self.T = T
         self.t_step = 0
         self.phi = self.init_avg()
+        self.evolve_v = evolve_v
 
-        # # Shift mat
-        # self.s = []
-        # self.s.append(np.array([-3, -2, -1, 0, 1, 2]))
-        # self.s.append(-1 * s[0] + 1)
+        if self.evolve_v:
+            self.config.v_orig = self.config.v
 
 
     def init_avg(self):
@@ -217,6 +216,10 @@ class FLASHM:
         splitting.
         :return: flux
         """
+
+        if self.evolve_v:
+            self.config.v = self.config.v_orig * 2*np.sin(2*np.pi*self.t_step)
+
 
         # Shift mat
         s = np.zeros([4, 6], dtype=int)
