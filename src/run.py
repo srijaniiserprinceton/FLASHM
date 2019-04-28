@@ -8,10 +8,12 @@ def velocity_profile(x):
     """creates velocity profile
     """
 
-    return np.ones(len(x))*-2
-    # return 10 + np.cos(x*2*np.pi)
-    # return np.sqrt(x) + 1
-
+    # return np.ones(len(x))*-1
+    # return  3 + np.cos(x*2*np.pi) + np.sin(x*10*np.pi)
+    # return np.sqrt(x) + np.sqrt(1 - x)
+    # return -np.sqrt(x) + np.sqrt(1 - x)
+    # return  3*np.cos(x*4*np.pi) + np.sin(x*10*np.pi)
+    return np.sin(x*2*np.pi)
 def main():
     N_cells = 200       # number of cells
     N = N_cells + 1     # N+1 is the number of cell edges.
@@ -39,8 +41,8 @@ def main():
     # reconstruction_method = "first_order_upwind"
     # reconstruction_method = "second_order_centered"
     # reconstruction_method = "third_order_upwind"
-    reconstruction_method = "MC"
-    # reconstruction_method = "MP5"
+    # reconstruction_method = "MC"
+    reconstruction_method = "MP5"
 
     flashm = FLASHM(config, bc=bc, method=reconstruction_method,
                  time_ep_method=time_stepping, T=T)
@@ -48,7 +50,7 @@ def main():
     # plot
     plt.ion()
     plt.figure()
-    # plt.ylim([-.5, 1.5])
+    # plt.ylim([-1.5, 2.5])
     plt.xlim([0, 1])
     t = 0
 
@@ -88,18 +90,20 @@ def main():
         t += config.dt
 
     # Run the solver
-    # plt.ylim([-.5, 1.5])
-    # plt.xlim([0, 1])
+    plt.ylim([-1.5, 5])
+    plt.xlim([0, 1])
 
 
     plt.title("%2.3f s" % t)
-    plt.plot(config.x[1:], flashm.init_avg(), label="Initial profile")
-    plt.plot(config.x[1:], phi_new, marker='o', label="Profile after time T")
-    plt.plot(t1[:counter + 1], energy[:counter + 1], '.', label="Energy")
-    plt.plot(t1[:counter + 1], energy2[:counter + 1], label="Energy Simps")
-    plt.plot(config.x,config.v,label="Velocity")
-    # plt.plot(config.x[1:], phi_new-flashm.init_avg(), label="Profile after time T")
-    plt.legend(loc=2)
+    plt.plot(config.x[1:], flashm.init_avg(), label="Initial profile", zorder=4)
+    plt.plot(config.x[1:], phi_new, label="Profile after time T=%1.1fs" % t,
+             linewidth=3, zorder=5)
+    plt.plot(t1[:counter + 1], energy[:counter + 1], label="$Rel. E_{tot}$ ",
+             zorder=3)
+    # plt.plot(t1[:counter + 1], energy2[:counter + 1], label="Energy Simps")
+    plt.plot(config.x, config.v,label="Velocity", zorder=2)
+
+    plt.legend(loc=0)
     plt.show(block=True)
 
 
