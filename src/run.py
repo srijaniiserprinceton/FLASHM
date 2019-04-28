@@ -20,14 +20,12 @@ def velocity_profile(x):
 def main():
     N_cells = 200      # number of cells
     N = N_cells + 1     # N+1 is the number of cell edges.
-    CFL = 0.5           # CFL number
+    CFL = 0.25           # CFL number
     dx = 1.0 / N_cells  # grid spacing
     sig = 0.05          # sigma for the gaussian in the initial function
-    alpha = 4.0         # parameter for defining the MC limited
-    T = 1               # Length of domain in code units is 1.0
+    v = -1.0             # advection velocity
+    T = 1/np.abs(v)           # Length of domain in code units is 1.0
 
-    x = np.arange(0, 1 + dx, dx) # discretization
-    v = velocity_profile(x[:-1] + np.diff(x) + np.diff(x)/2) # velocity
 
 
     # Setting Configuration.
@@ -43,8 +41,8 @@ def main():
     # reconstruction_method = "first_order_upwind"
     # reconstruction_method = "second_order_centered"
     # reconstruction_method = "third_order_upwind"
-    # reconstruction_method = "MC"
-    reconstruction_method = "MP5"
+    reconstruction_method = "MC"
+    # reconstruction_method = "MP5"
 
     flashm = FLASHM(config, bc=bc, method=reconstruction_method,
                  time_ep_method=time_stepping, T=T)
@@ -54,6 +52,7 @@ def main():
     plt.figure()
     t = 0
 
+<<<<<<< HEAD
     # Start countin'
     start = time.time()
 
@@ -81,6 +80,21 @@ def main():
             plt.legend(loc=2)
             plt.pause(0.001)
             plt.clf()
+=======
+    while t<T:
+        # Run the solver
+        plt.ylim([-.5, 1.5])
+        plt.xlim([0, 1])
+        phi_new = flashm.one_time_step()
+
+        plt.title("%2.3f s" % t)
+        plt.plot(config.x[1:], flashm.init_avg(), label="Initial profile")
+        plt.plot(config.x[1:], phi_new, label="Profile after time T")
+        # plt.plot(config.x[1:], phi_new-flashm.init_avg(), label="Profile after time T")
+        plt.legend(loc=2)
+        plt.pause(0.001)
+        plt.clf()
+>>>>>>> parent of 087aec4... EVERYTHING WORKS!!!!!!
 
         t += config.dt
 
