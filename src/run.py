@@ -17,86 +17,100 @@ def velocity_profile(x):
     return np.sin(x*2*np.pi)
 
 def main():
+
+    #### INPUTS ################################################################
     N_cells = 200       # number of cells
     N = N_cells + 1     # N+1 is the number of cell edges.
     CFL = 0.5           # CFL number
     dx = 1.0 / N_cells  # grid spacing
     sig = 0.05          # sigma for the gaussian in the initial function
     alpha = 4.0         # parameter for defining the MC limited
-
-    x = np.arange(0, 1+dx, dx)
+    x = np.arange(0, 1+dx, dx) # x profile
     v = velocity_profile(x) # Advection profile
-    T = 1  # Length of time of the simulation in code units is 1.0
+    T = 1               # Length of time of the simulation in code units is 1.0
+    bc = "outgoing"     # Boundary Conditions
+    evolve_v = "True"   # change profile of v in time  hard coded: make function
+                        # of v and t with lambda...
+    time_stepping = "SSPRK3" # time_stepping [Needs to be streamlined]
+    # reconstruction_method = "first_order_upwind"  # Flux reconstruction method
+    # reconstruction_method = "second_order_centered" # Flux reconstruction method
+    # reconstruction_method = "third_order_upwind"  # Flux reconstruction method
+    # reconstruction_method = "MC"                  # Flux reconstruction method
+    reconstruction_method = "MP5"                   # Flux reconstruction method
+    animate = True      # Set to true if you to plot the animation.
+    nsteps = 20        # Number of time steps to be plotted
+    ############################################################################
 
     # Setting Configuration.
     config = Config(dim=1, cells=N_cells, CFL=CFL, dx=dx, sigma=sig, v=v,
                     alpha=alpha, profile="gauss_tophat")
 
-
-
     # Initalize the solver
-    bc = "outgoing"
-    evolve_v = "True"   # change profile of v in time  hard coded: make function
-                        # of v and t with lambda...
-    time_stepping = "SSPRK3"
-
-    # reconstruction_method = "first_order_upwind"
-    # reconstruction_method = "second_order_centered"
-    # reconstruction_method = "third_order_upwind"
-    # reconstruction_method = "MC"
-    reconstruction_method = "MP5"
-
     flashm = FLASHM(config, bc=bc, method=reconstruction_method,
                  time_ep_method=time_stepping, T=T, evolve_v=evolve_v)
+
+
+    # Plotting [Maybe create subfunctions for the class here?]
+    t1 = np.arange(0, T+config.dt, config.dt)
+    n_plots = np.round(len(t1)/nsteps)  # every n_plots-th intermediate step
+                                        # is plotted, which is a total of 100
+                                        # steps
+
+    # Counter for Energy
+    counter = 0
+    # Initialize energy vector
+    energy = np.zeros(len(t1))
+    energy[0] = np.sum(flashm.phi * np.diff(config.x))
+
+    # Relative energy from start energy
+    rel_energy = energy[0]
+    energy[0] = 1
 
     # plot
     plt.ion()
     plt.figure()
-    # plt.ylim([-1.5, 2.5])
-    plt.xlim([0, 1])
     t = 0
 
-    counter = 0
-    t1 = np.arange(0, T+config.dt, config.dt)
-
-    n_plots = np.round(len(t1)/100)
-
-    energy = np.zeros(len(t1))
-    energy[0] = np.sum(flashm.phi * np.diff(config.x))
-    rel_energy = energy[0]
-    energy[0] = 1
-
+    # start loop timer
     start = time.time()
 
+    # Evolve profile in time
     while t<T-config.dt:
         # Run the solver
         phi_new = flashm.one_time_step()
 
+        # Update Energy
         counter += 1
         energy[counter] = np.sum(phi_new * np.diff(config.x)) / rel_energy
 
-        if counter%n_plots:
-            # plt.ylim([-.5, 1.5])
-            # plt.xlim([0, 1])
+        # Plot intermediate timesteps
+        if counter % n_plots == 1 and animate:
+            plt.ylim([-1.5, 5])
+            plt.xlim([0, 1])
             plt.title("%2.3f s" % t)
-            plt.plot(config.x[1:], flashm.init_avg(), label="Initial profile")
-            plt.plot(config.x[1:], phi_new, label="Profile after time T")
-            plt.plot(t1[:counter+1], energy[:counter+1], label="Energy")
-            plt.plot(config.x, config.v, label="Velocity", zorder=2)
+            plt.plot(config.x[1:], flashm.init_avg(), label="Initial profile",
+                     zorder=4)
+            plt.plot(config.x[1:], phi_new,linewidth=3, zorder=5,
+                     label="Profile after time T=%1.1fs" % t)
+            plt.plot(t1[:counter + 1], energy[:counter + 1], zorder=3,
+                     label="$Rel. E_{tot}$ ")
+            plt.plot(config.x, flashm.config.v, label="Velocity", zorder=2)
             plt.legend(loc=2)
             plt.pause(0.001)
             plt.clf()
 
         t += config.dt
 
+    # end loop timer
     end = time.time()
+
+    # Print total elapsed time
     print("Time elapsed: %3.1f" %(end-start))
 
-    # Run the solver
+
+    # Plot final profile
     plt.ylim([-1.5, 5])
     plt.xlim([0, 1])
-
-
     plt.title("%2.3f s" % t)
     plt.plot(config.x[1:], flashm.init_avg(), label="Initial profile", zorder=4)
     plt.plot(config.x[1:], phi_new, label="Profile after time T=%1.1fs" % t,
@@ -104,8 +118,7 @@ def main():
     plt.plot(t1[:counter + 1], energy[:counter + 1], label="$Rel. E_{tot}$ ",
              zorder=3)
     plt.plot(config.x, flashm.config.v, label="Velocity", zorder=2)
-
-    plt.legend(loc=0)
+    plt.legend(loc=2)
     plt.show(block=True)
 
 
