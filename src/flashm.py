@@ -18,12 +18,8 @@ This script contains main driver class for the shockwave modelling.
 import numpy as np
 import matplotlib
 import scipy.integrate as integrate
-from recon import second_order_centered, \
-    first_order_upwind, \
-    third_order_upwind,\
-    MC, \
-    MP5 #NOQA
-
+import recon
+import sys
 class Config:
     """Class that handles parametrization of the domain.
     Boundary conditions etc."""
@@ -60,12 +56,12 @@ class Config:
         self.sigma = sigma
         self.v = v
         self.alpha = alpha
-        self.N_ghost = 3
+        self.N_ghost = 5
         # Compute cell edges
         self.x = np.arange(0, 1 + dx, dx)
 
         # Compute dt
-        self.dt = CFL*dx/v
+        self.dt = CFL*dx/np.max(np.abs(v))
 
         # Set initial profile
         if profile == "gaussian":
@@ -78,6 +74,8 @@ class Config:
         else:
             self.init_profile = profile
             self.profile_choice = "random"
+
+
 
     def init_profile_gaussian(self, x):
         """Function to define the initial closed form profile (non-averaged)"""
@@ -96,6 +94,24 @@ class Config:
 
         return profile
 
+    # def init_profile_gaussian(self, x):
+    #     """Function to define the initial closed form profile (non-averaged)"""
+    #     return np.exp((-(x - 0.7) ** 2) / (2 * (self.sigma ** 2)))
+
+    # def init_profile_gauss_tophat(self, x):
+    #     """Function constructing the tophat profile."""
+    #
+    #     # below 60% of the profile set top hat
+    #     profile = np.where(x >= 0.4, self.init_profile_gaussian(
+    #         x), 0)
+    #
+    #     # between 70 and 90 %
+    #     profile = np.where(np.logical_and(x >= 0.1, x <= 0.3),
+    #                        1, profile)
+    #
+    #     return profile
+
+
 
 
 class FLASHM:
@@ -112,11 +128,16 @@ class FLASHM:
         """
         self.config = config
         self.bc = bc
-        self.method = method
+        self.method = getattr(recon, method)
         self.time_ep_method = time_ep_method
         self.T = T
         self.t_step = 0
         self.phi = self.init_avg()
+
+        # # Shift mat
+        # self.s = []
+        # self.s.append(np.array([-3, -2, -1, 0, 1, 2]))
+        # self.s.append(-1 * s[0] + 1)
 
 
     def init_avg(self):
@@ -149,14 +170,14 @@ class FLASHM:
 
         return f_avg
 
-    def pad(self, phi, N_ghost):
-        """Pads phi with 3 zeros at beginning and end. To make application of
+    def pad(self, phi):
+        """Pads phi with N zeros at beginning and end. To make application of
         boundary conditions easier.
-        :param phi: potential profile
-        :param : potential profile"""
+        N_ghost is the number of ghost cells on each side.
+        :param phi: potential profile"""
 
-
-        return np.pad(phi, (N_ghost, N_ghost), "constant", constant_values=(0, 0))
+        return np.pad(phi, (self.config.N_ghost, self.config.N_ghost),
+                      "constant", constant_values=(0, 0))
 
     def apply_bc(self, phi):
         """
@@ -164,10 +185,10 @@ class FLASHM:
         """
 
         # Set number of ghost cells
-        N_ghost = 3
+        N_ghost = self.config.N_ghost
 
         # Initialize phi with ghost cells
-        ghost_phi = self.pad(phi, N_ghost)
+        ghost_phi = self.pad(phi)
 
         # Apply BC's
         if self.bc == "periodic":
@@ -181,23 +202,70 @@ class FLASHM:
             Use simple Newton extrapolation from the boundary:
             f(x) = f1 + (f2-f1)/(x2-x1)(x-x1)
             """
-
             # performing a linear extrapolation at the boundaries
-            ghost_phi[0:N_ghost] = (phi[N_ghost + 1] - phi[
-                N_ghost]) * (np.arange(N_ghost) - N_ghost) + phi[N_ghost]
+            ghost_phi[0:N_ghost] = phi[0] + (phi[1] - phi[0]) \
+                                   * - np.flip(np.arange(N_ghost) + 1, 0) \
 
-            ghost_phi[-N_ghost:] = (phi[-1] - phi[-2]) * (
-                        1 + np.arange(N_ghost)) + phi[-2]
+
+            ghost_phi[-N_ghost:] = phi[-1] + (phi[-1] - phi[-2]) \
+                                   * (1 + np.arange(N_ghost))
 
         return ghost_phi
+
+    def lf_flux(self, phi):
+        """ Handles computation of the left and right flux, i.e., basic flux
+        splitting.
+        :return: flux
+        """
+
+        # Shift mat
+        s = np.zeros([4, 6], dtype=int)
+        # right going wind
+        s[1] = np.array([-3, -2, -1, 0, 1, 2]) # j plus half
+        s[0] = np.array([-3, -2, -1, 0, 1, 2]) # j minus half
+        # left going wind
+        s[3] = (1 - s[0]) # j plus half
+        s[2] = (1 - s[0] - 2) # j minus half
+
+        # For constant velocity, the flux and the parameters vary by just a
+        # constant velocity. So, computing flux_discrete just once. For a
+        # generic velocity, we need to compute twice
+
+        # contains u^L_jph and u^L_jmh
+        recon_L = self.method(self.config.x, self.apply_bc(phi),
+                              self.config.v, self.config.N_ghost, s[0:2],
+                              self.config.alpha)
+
+        # contains u^R_jph and u^R_jmh
+        recon_R = self.method(self.config.x, self.apply_bc(phi),
+                              self.config.v, self.config.N_ghost, s[2:],
+                              self.config.alpha)
+
+        # Putting stuff together
+        phi_jph_final = 0.5 * (self.config.v[1:] * recon_L[1, :]
+                               + self.config.v[1:] * recon_R[1, :]) \
+                        - 0.5 * np.abs(self.config.v[1:]) \
+                        * (recon_R[1, :] - recon_L[1, :])
+
+        phi_jmh_final = 0.5 * (self.config.v[:-1] * recon_L[0, :]
+                               + self.config.v[:-1] * recon_R[0, :]) \
+                        - 0.5 * np.abs(self.config.v[:-1]) \
+                        * (recon_R[0, :] - recon_L[0, :])
+
+        flux = -(phi_jph_final - phi_jmh_final) / np.diff(self.config.x)
+
+        return flux
+
+
 
     def one_time_step(self):
         """Advances the simulation one timestep."""
 
+
         # Parameters
         N_cells = self.config.cells
         dt = self.config.dt
-        N_ghost = self.config.N_ghost
+
         # Setting new Phi
         if self.t_step == 0:
             self.phi_new = self.phi
@@ -206,29 +274,17 @@ class FLASHM:
         phi1 = np.zeros(N_cells)
         phi2 = np.zeros(N_cells)
 
-        phi1 = self.phi_new + dt * eval(self.method + "(self.config.x,"
-                                                      "self.apply_bc("
-                                                      "self.phi_new),"
-                                                      "self.config.v,"
-                                                      "N_ghost, "
-                                                      "self.config.alpha)")
+        phi1 = self.phi_new + dt * self.lf_flux(self.phi_new)
 
-        phi2 = 0.75 * self.phi_new + 0.25 * (
-                phi1 + dt * eval(self.method + "(self.config.x,"
-                                 + "self.apply_bc(phi1),"
-                                 + "self.config.v, N_ghost, "
-                                 + "self.config.alpha)"))
+        phi2 = 0.75 * self.phi_new + 0.25 * (phi1 + dt * self.lf_flux(phi1))
 
-        phi_np1 = (1.0 / 3.0) * self.phi_new + (2.0 / 3.0) * (
-                phi2 + dt * eval(self.method + "(self.config.x,"
-                                 + "self.apply_bc(phi2),"
-                                 + "self.config.v,"
-                                 + "N_ghost, "
-                                   "self.config.alpha)"))
+        phi_np1 = (1.0 / 3.0) * self.phi_new \
+                  + (2.0 / 3.0) * (phi2 + dt * self.lf_flux(phi2))
 
-        self.phi_new = phi_np1  ##reassigning phi with the phi at next time
-        # step
+        # reassigning phi with the phi at next timestep
+        self.phi_new = phi_np1
 
+        # updating dt
         self.t_step += dt
 
         return self.phi_new
