@@ -8,8 +8,8 @@ def velocity_profile(x):
     """creates velocity profile
     """
 
-    # return np.ones(len(x))*2
-    return np.sin(x*10*np.pi) + -0.5 + np.cos(x*2*np.pi)
+    return np.ones(len(x))*-2
+    # return 10 + np.cos(x*2*np.pi)
     # return np.sqrt(x) + 1
 
 def main():
@@ -18,6 +18,7 @@ def main():
     CFL = 0.5           # CFL number
     dx = 1.0 / N_cells  # grid spacing
     sig = 0.05          # sigma for the gaussian in the initial function
+    v =  1.0             # advection velocity
     alpha = 4.0         # parameter for defining the MC limited
 
     x = np.arange(0, 1+dx, dx)
