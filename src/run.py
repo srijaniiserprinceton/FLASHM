@@ -13,7 +13,8 @@ def velocity_profile(x):
     # return np.sqrt(x) + np.sqrt(1 - x)
     # return -np.sqrt(x) + np.sqrt(1 - x)
     # return  3*np.cos(x*4*np.pi) + np.sin(x*10*np.pi)
-    return np.sin(x*2*np.pi)
+    return -0.5*np.sin(x*2*np.pi)
+
 def main():
     N_cells = 200       # number of cells
     N = N_cells + 1     # N+1 is the number of cell edges.
@@ -34,7 +35,7 @@ def main():
 
 
     # Initalize the solver
-    bc = "periodic"
+    bc = "outgoing"
 
     time_stepping = "SSPRK3"
 
