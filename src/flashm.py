@@ -61,7 +61,7 @@ class Config:
         self.x = np.arange(0, 1 + dx, dx)
 
         # Compute dt
-        self.dt = CFL*dx/np.abs(v)
+        self.dt = CFL*dx/np.max(np.abs(v))
 
         # Set initial profile
         if profile == "gaussian":
@@ -241,15 +241,17 @@ class FLASHM:
                               self.config.v, self.config.N_ghost, s[2:],
                               self.config.alpha)
 
+
         # Putting stuff together
         phi_jph_final = 0.5 * (self.config.v * recon_L[1, :]
                                + self.config.v * recon_R[1, :]) \
-                        - 0.5 * np.abs(self.config.v) \
+                        - 0.5 * np.abs(self.config.v)\
                         * (recon_R[1, :] - recon_L[1, :])
 
-        phi_jmh_final = 0.5 * (self.config.v * recon_L[0, :]
+        phi_jmh_final = 0.5 * ( self.config.v * recon_L[0, :]
                                + self.config.v * recon_R[0, :]) \
                         - 0.5 * np.abs(self.config.v) \
+                        * (recon_R[1, :] - recon_L[1, :]) \
                         * (recon_R[0, :] - recon_L[0, :])
 
         flux = -(phi_jph_final - phi_jmh_final) / np.diff(self.config.x)
