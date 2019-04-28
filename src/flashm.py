@@ -219,6 +219,9 @@ class FLASHM:
 
         if self.evolve_v:
             self.config.v = self.config.v_orig * 2*np.sin(2*np.pi*self.t_step)
+        elif self.evolve_v=="fancy":
+            self.config.v = np.sin( 2*np.pi*self.config.x
+                                    + 2*np.pi*self.t_step)
 
 
         # Shift mat

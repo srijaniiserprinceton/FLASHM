@@ -46,7 +46,7 @@ def main():
     reconstruction_method = "MP5"
 
     flashm = FLASHM(config, bc=bc, method=reconstruction_method,
-                 time_ep_method=time_stepping, T=T, evolve_v=True)
+                 time_ep_method=time_stepping, T=T, evolve_v=fancy)
 
     # plot
     plt.ion()
